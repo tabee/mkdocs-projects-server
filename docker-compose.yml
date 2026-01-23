@@ -1,0 +1,54 @@
+version: "3.8"
+
+services:
+  builder:
+    container_name: ${CONTAINER_BUILDER}
+    build:
+      context: ./builder
+      dockerfile: Dockerfile
+      args:
+        USER_ID: ${USER_ID}
+        GROUP_ID: ${GROUP_ID}
+    working_dir: /home/mkdocs/work
+    volumes:
+      - ${PROJECTS_DIR}:/home/mkdocs/work/projects:ro
+      - ${SITE_DIR}:/home/mkdocs/work/site:rw
+    # Hardening
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /home/mkdocs/.cache
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    restart: "no"
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  nginx:
+    container_name: ${CONTAINER_NGINX}
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+      args:
+        USER_ID: ${USER_ID}
+        GROUP_ID: ${GROUP_ID}
+    ports:
+      - "127.0.0.1:${NGINX_PORT}:8080"
+    volumes:
+      - ${SITE_DIR}:/usr/share/nginx/html:ro
+    # Hardening
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+      - NET_RAW
+    restart: unless-stopped
+    depends_on:
+      - builder
