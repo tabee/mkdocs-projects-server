@@ -13,6 +13,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN apt-get update && apt-get install -y --no-install-recommends \
       tini \
       ca-certificates \
+      inotify-tools \
     && rm -rf /var/lib/apt/lists/*
 
 # Deterministischer User (wie beim Jupyter-Setup)
@@ -32,9 +33,10 @@ RUN python -m pip install --upgrade pip \
     && python -m pip install -r /tmp/requirements.txt \
     && rm -f /tmp/requirements.txt
 
-# Build-Script fest im Image (nicht aus Mount!)
+# Build-Scripts fest im Image (nicht aus Mount!)
 COPY --chown=mkdocs:mkdocs build-all.sh /home/mkdocs/build-all.sh
-RUN chmod +x /home/mkdocs/build-all.sh
+COPY --chown=mkdocs:mkdocs watch-and-build.sh /home/mkdocs/watch-and-build.sh
+RUN chmod +x /home/mkdocs/build-all.sh /home/mkdocs/watch-and-build.sh
 
 ENTRYPOINT ["/usr/bin/tini", "--"]
-CMD ["/home/mkdocs/build-all.sh"]
+CMD ["/home/mkdocs/watch-and-build.sh"]
