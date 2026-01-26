@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROJECTS="/home/mkdocs/work/projects"
+PROJECTS="${PROJECTS_DIR:-/home/mkdocs/work/projects}"
 BUILD_SCRIPT="/home/mkdocs/build-all.sh"
 
 echo "👁️  Starte File-Watcher für MkDocs Projekte..."
