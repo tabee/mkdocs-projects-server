@@ -136,11 +136,11 @@ docker compose logs -f nginx
 
 ### 4. Dein erstes Projekt
 
-Erstelle `~/docs-projects/mein-projekt/`:
+Erstelle `/srv/appdata/mkdocs/projects`:
 
 ```bash
-mkdir -p ~/docs-projects/mein-projekt/docs
-cat > ~/docs-projects/mein-projekt/mkdocs.yml << 'EOF'
+mkdir -p /srv/appdata/mkdocs/projects/mein-projekt/docs
+cat > /srv/appdata/mkdocs/projects/mein-projekt/mkdocs.yml << 'EOF'
 site_name: Mein Projekt
 docs_dir: docs
 site_dir: site
@@ -148,7 +148,7 @@ theme:
   name: material
 EOF
 
-cat > ~/docs-projects/mein-projekt/docs/index.md << 'EOF'
+cat > /srv/appdata/mkdocs/projects/mein-projekt/docs/index.md << 'EOF'
 # Willkommen
 
 Das ist mein erstes MkDocs Projekt.
