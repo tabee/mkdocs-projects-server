@@ -1,8 +1,9 @@
 # syntax=docker/dockerfile:1.7
 FROM python:3.12-slim-bookworm
 
-ARG USER_ID=1000
-ARG GROUP_ID=1000
+# REQUIRED: USER_ID and GROUP_ID must be provided via build args
+ARG USER_ID
+ARG GROUP_ID
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \

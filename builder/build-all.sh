@@ -10,7 +10,7 @@ mapfile -t PROJ_DIRS < <(find "${PROJECTS}" -mindepth 1 -maxdepth 1 -type d | so
 
 if [[ ${#PROJ_DIRS[@]} -eq 0 ]]; then
   echo "⚠️  Keine Projekte unter ${PROJECTS} gefunden."
-  echo "   Erstelle ~/docs-projects/<projekt>/ mit mkdocs.yml"
+  echo "   Erstelle \${PROJECTS_DIR}/<projekt>/ mit mkdocs.yml"
   exit 0
 fi
 

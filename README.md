@@ -4,19 +4,25 @@ Ein hardened, produktionsreifes Multi-Project-Setup für MkDocs mit lokalem Host
 
 ## Schnellstart (TL;DR)
 
+**WICHTIG:** Alle Umgebungsvariablen müssen explizit gesetzt werden. Es gibt keine Default-Werte.
+
 ```bash
-# 1. Ordner erstellen
-mkdir -p ~/docs-projects ~/docs-site
+# 1. Ordner erstellen (Beispiel-Pfade)
+mkdir -p /srv/appdata/mkdocs/projects /srv/appdata/mkdocs/site
 
 # 2. Repo klonen / ins Verzeichnis gehen
-cd ~/Code/mkdocs-projects-server
+cd /path/to/mkdocs-projects-server
 
-# 3. Environment-Variablen setzen (einmalig)
-echo "USER_ID=$(id -u)" > .env
-echo "GROUP_ID=$(id -g)" >> .env
-echo "PROJECTS_DIR=$HOME/docs-projects" >> .env
-echo "SITE_DIR=$HOME/docs-site" >> .env
-echo "NGINX_PORT=8080" >> .env
+# 3. Environment-Variablen setzen (alle erforderlich!)
+cat > .env << EOF
+USER_ID=$(id -u)
+GROUP_ID=$(id -g)
+PROJECTS_DIR=/srv/appdata/mkdocs/projects
+SITE_DIR=/srv/appdata/mkdocs/site
+NGINX_PORT=8080
+CONTAINER_BUILDER=mkdocs-builder
+CONTAINER_NGINX=docs-nginx
+EOF
 
 # 4. Stack starten
 docker compose up -d --build
@@ -32,7 +38,7 @@ docker compose up -d --build
 ### Datei-Layout auf dem Host
 
 ```
-~/docs-projects/           ← Hier legst du deine MkDocs-Projekte hin
+${PROJECTS_DIR}/              ← MkDocs-Projekte
 ├── projekt-alpha/
 │   ├── mkdocs.yml
 │   └── docs/
@@ -45,23 +51,23 @@ docker compose up -d --build
 └── projekt-gamma/
     └── ...
 
-~/docs-site/               ← Build-Output (Container schreibt hier)
+${SITE_DIR}/                  ← Build-Output (Container schreibt hier)
 ├── projekt-alpha/
 │   ├── index.html
 │   └── ...
 ├── projekt-beta/
 │   └── ...
-└── index.html             ← Auto-generierter Index (optional)
+└── index.html               ← Auto-generierter Index (optional)
 ```
 
 ### Docker Services
 
 ```
-builder          → baut alle Projekte aus ~/docs-projects → ~/docs-site
+builder          → baut alle Projekte aus ${PROJECTS_DIR} → ${SITE_DIR}
   └─ Python 3.12 + MkDocs in venv
   └─ läuft als nicht-root
 
-nginx            → served ~/docs-site auf 127.0.0.1:8080
+nginx            → served ${SITE_DIR} auf 127.0.0.1:${NGINX_PORT}
   └─ read-only Zugriff
   └─ läuft als nicht-root
 ```
@@ -73,53 +79,41 @@ nginx            → served ~/docs-site auf 127.0.0.1:8080
 ### 1. Lokale Ordner erstellen
 
 ```bash
-mkdir -p ~/docs-projects ~/docs-site
-```
-
-Gib beiden Ordnern die gleichen Rechte wie dein aktueller User:
-
-```bash
-chmod 755 ~/docs-projects ~/docs-site
+# Empfohlene Pfade:
+mkdir -p /srv/appdata/mkdocs/projects /srv/appdata/mkdocs/site
+chmod 755 /srv/appdata/mkdocs/projects /srv/appdata/mkdocs/site
 ```
 
 ### 2. `.env` konfigurieren
 
-Editiere oder erstelle `~/Code/mkdocs-projects-server/.env`:
+Alle Variablen sind **erforderlich** - es gibt keine Default-Werte.
 
 ```bash
-# Automatisch (am schnellsten)
-echo "USER_ID=$(id -u)" > .env
-echo "GROUP_ID=$(id -g)" >> .env
-echo "PROJECTS_DIR=$HOME/docs-projects" >> .env
-echo "SITE_DIR=$HOME/docs-site" >> .env
-echo "NGINX_PORT=8080" >> .env
-echo "CONTAINER_BUILDER=mkdocs-builder" >> .env
-echo "CONTAINER_NGINX=docs-nginx" >> .env
-```
-
-Oder manuell (`~/Code/mkdocs-projects-server/.env`):
-
-```env
-USER_ID=1000
-GROUP_ID=1000
-PROJECTS_DIR=/home/username/docs-projects
-SITE_DIR=/home/username/docs-site
+# .env erstellen (alle Werte müssen gesetzt werden)
+cat > .env << EOF
+USER_ID=$(id -u)
+GROUP_ID=$(id -g)
+PROJECTS_DIR=/srv/appdata/mkdocs/projects
+SITE_DIR=/srv/appdata/mkdocs/site
 NGINX_PORT=8080
 CONTAINER_BUILDER=mkdocs-builder
 CONTAINER_NGINX=docs-nginx
+EOF
 ```
 
-⚠️ **Wichtig:** Nutze **absolute Pfade** (nicht `~`). Dein aktueller User muss diese Ordner besitzen:
+⚠️ **Wichtig**
+- Nutze **absolute Pfade** (nicht `~`)
+- Der User muss diese Ordner besitzen:
 
 ```bash
-ls -la ~/docs-projects ~/docs-site
-# drwxr-xr-x dein_user dein_user
+ls -la /srv/appdata/mkdocs/
+# Ownership muss deiner UID/GID entsprechen
 ```
 
 ### 3. Stack bauen und starten
 
 ```bash
-cd ~/Code/mkdocs-projects-server
+cd /path/to/mkdocs-projects-server
 docker compose up -d --build
 ```
 
@@ -134,12 +128,11 @@ docker compose logs -f builder
 docker compose logs -f nginx
 ```
 
-### 4. Dein erstes Projekt
-
-Erstelle `/srv/appdata/mkdocs/projects`:
+### 4. Erstes Projekt erstellen
 
 ```bash
 mkdir -p /srv/appdata/mkdocs/projects/mein-projekt/docs
+
 cat > /srv/appdata/mkdocs/projects/mein-projekt/mkdocs.yml << 'EOF'
 site_name: Mein Projekt
 docs_dir: docs
@@ -158,16 +151,30 @@ EOF
 ### 5. Neuen Build starten
 
 ```bash
-# Builder neu ausführen (erzeugt ~/docs-site/mein-projekt/)
+# Builder neu ausführen
 docker compose run --rm builder
 
 # Check
-ls ~/docs-site/mein-projekt/
+ls /srv/appdata/mkdocs/site/mein-projekt/
 # → index.html, ...
 
 # Browser
 # http://127.0.0.1:8080/mein-projekt/
 ```
+
+---
+
+## Erforderliche Variablen
+
+| Variable | Beschreibung | Beispiel |
+|----------|--------------|----------|
+| `USER_ID` | Linux-UID des Host-Users | `1000` (ermitteln: `id -u`) |
+| `GROUP_ID` | Linux-GID des Host-Users | `1000` (ermitteln: `id -g`) |
+| `PROJECTS_DIR` | Absoluter Pfad für MkDocs-Projekte | `/srv/appdata/mkdocs/projects` |
+| `SITE_DIR` | Absoluter Pfad für Build-Output | `/srv/appdata/mkdocs/site` |
+| `NGINX_PORT` | Port für Nginx | `8080` |
+| `CONTAINER_BUILDER` | Container-Name für Builder | `mkdocs-builder` |
+| `CONTAINER_NGINX` | Container-Name für Nginx | `docs-nginx` |
 
 ---
 
@@ -189,7 +196,7 @@ ls ~/docs-site/mein-projekt/
 
 ### Permission Denied beim Builder
 
-**Problem:** Builder kann in `~/docs-site` nicht schreiben.
+**Problem:** Builder kann in `${SITE_DIR}` nicht schreiben.
 
 **Lösung:**
 
@@ -198,11 +205,7 @@ ls ~/docs-site/mein-projekt/
 cat .env | grep USER_ID
 
 # Falls falsch, aktualisier .env mit deinen realen Werten
-echo "USER_ID=$(id -u)" > .env
-echo "GROUP_ID=$(id -g)" >> .env
-# ... (rest wiederholen)
-
-# Container neu starten
+# und starte den Stack neu:
 docker compose down
 docker compose up -d --build
 docker compose run --rm builder
@@ -224,14 +227,6 @@ docker compose logs builder | grep -i "skip\|error"
 * YAML-Syntax-Fehler (nutze yamllint zum Checken)
 * Fehlende Theme (z. B. `mkdocs-material`)
 
-**Fix:**
-
-```bash
-# mkdocs.yml lokal validieren (falls mkdocs lokal installiert)
-cd ~/docs-projects/dein-projekt
-mkdocs build --strict
-```
-
 ### Nginx zeigt 404
 
 **Problem:** Browser erreicht Seite nicht.
@@ -242,11 +237,11 @@ mkdocs build --strict
 # Container laufen?
 docker compose ps | grep nginx
 
-# Port richtig?
+# Port richtig? (ersetze 8080 mit deinem NGINX_PORT)
 curl http://127.0.0.1:8080/
 
 # HTML existiert?
-ls ~/docs-site/dein-projekt/index.html
+ls ${SITE_DIR}/dein-projekt/index.html
 
 # Nginx-Logs
 docker compose logs nginx
@@ -264,7 +259,7 @@ Dieses Setup ist hardened:
 * **tmpfs** für Schreibzugriffe
 * **Strict UID/GID Mapping** (keine Permission-Hölle auf dem Host)
 
-Deine Quellen bleiben unter **deiner Kontrolle** auf dem Host. Die Container können nur:
+Daten bleiben unter **deiner Kontrolle** auf dem Host. Die Container können nur:
 
 * Builder: `/projects` lesen, `/site` schreiben
 * Nginx: `/site` lesen (read-only)
@@ -290,8 +285,8 @@ Für Entwicklung: Container der mit inotify lädt und rebuildet (auf Anfrage).
 ### Backup
 
 ```bash
-# Alle Projekte + Sites sichern
-tar czf docs-backup-$(date +%Y%m%d).tar.gz ~/docs-projects ~/docs-site
+# Alle Projekte + Sites sichern (Pfade anpassen)
+tar czf docs-backup-$(date +%Y%m%d).tar.gz ${PROJECTS_DIR} ${SITE_DIR}
 ```
 
 ---
@@ -326,10 +321,10 @@ docker stats
 ## Struktur des Repos
 
 ```
-~/Code/mkdocs-projects-server/
+mkdocs-projects-server/
 ├── README.md                  ← Du bist hier
 ├── docker-compose.yml         ← Orchestrierung
-├── .env                       ← Deine Konfiguration (lokale Variablen)
+├── .env                       ← Deine Konfiguration (alle Variablen erforderlich)
 │
 ├── builder/
 │   ├── Dockerfile             ← Python 3.12 + MkDocs + venv
@@ -342,7 +337,7 @@ docker stats
 │   └── conf.d/                ← Site-spezifische Configs
 │       └── default.conf       ← Default Projekt-Index
 │
-└── .gitignore                 ← (optional)
+└── .gitignore
 ```
 
 ---
