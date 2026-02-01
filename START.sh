@@ -65,8 +65,7 @@ mkdocs-projects-server/
    → Saubere Trennung: Repo-Code vs. Host-Daten
 
 ✅ Keine Default-Werte
-   → Deployment rein über Umgebungsvariablen
-   → Alle Werte müssen explizit gesetzt werden
+   → Deployment rein über explizit gesetzte Umgebungsvariablen
 
 
 🚀 QUICKSTART

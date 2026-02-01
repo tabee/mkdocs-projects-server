@@ -101,7 +101,7 @@ CONTAINER_NGINX=docs-nginx
 EOF
 ```
 
-⚠️ **Wichtig:** 
+⚠️ **Wichtig**
 - Nutze **absolute Pfade** (nicht `~`)
 - Der User muss diese Ordner besitzen:
 
