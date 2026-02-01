@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1.7
 FROM python:3.12-slim-bookworm
 
 # REQUIRED: USER_ID and GROUP_ID must be provided via build args

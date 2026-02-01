@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1.7
 FROM nginx:1.27-alpine
 
 # REQUIRED: USER_ID and GROUP_ID must be provided via build args
