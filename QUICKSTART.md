@@ -4,15 +4,14 @@
 ✅ README.md                     - Komplette Dokumentation & Gebrauchsanleitung
 ✅ IMPLEMENTATION.md             - Was wurde implementiert, Status
 ✅ docker-compose.yml            - Orchestrierung (builder + nginx services)
-✅ .env.example                  - Template für .env (manuell: cp .env.example .env)
+✅ .env.example                  - Template für .env (alle Variablen erforderlich!)
 ✅ .gitignore                    - Git-Ignores (.env, __pycache__, etc.)
-✅ setup.sh                      - Automatisiertes Setup-Script
-✅ Todo.md                       - Dieses Dokument (alte Anforderungen → erledigt)
+✅ setup.sh                      - Interaktives Setup-Script
 
 Builder-Container:
 ✅ builder/Dockerfile            - Python 3.12 + MkDocs + venv, non-root, hardened
 ✅ builder/requirements.txt       - mkdocs==1.6.1, mkdocs-material==9.5.30
-✅ builder/build-all.sh          - Baut alle Projekte in ~/docs-projects → ~/docs-site
+✅ builder/build-all.sh          - Baut alle Projekte
 
 Nginx-Container:
 ✅ nginx/Dockerfile              - Alpine Nginx, non-root, read-only, hardened
@@ -20,30 +19,42 @@ Nginx-Container:
 ✅ nginx/conf.d/default.conf     - Vhost für Projekt-Subdirectories
 ```
 
+## WICHTIG: Keine Default-Werte
+
+**Alle Umgebungsvariablen müssen explizit gesetzt werden.** Es gibt keine Default-Werte.
+
 ## Wie geht's weiter?
 
-### Option A: Automatisiertes Setup (empfohlen)
+### Option A: Interaktives Setup (empfohlen)
 
 ```bash
 bash setup.sh
 ```
 
-Macht:
-1. Erstellt ~/.env mit deiner UID/GID
-2. Erstellt ~/docs-projects und ~/docs-site
-3. Docker-Images bauen
-4. Services starten
-5. Zeigt Nächste-Schritte
+Das Script fragt alle erforderlichen Werte interaktiv ab:
+1. PROJECTS_DIR (absoluter Pfad)
+2. SITE_DIR (absoluter Pfad)
+3. NGINX_PORT
+4. Container-Namen
+5. Docker-Images bauen
+6. Services starten
 
 ### Option B: Manuelles Setup
 
 ```bash
-# 1. .env erstellen
-cp .env.example .env
-# → Editiere .env: absolute Pfade, USER_ID=$(id -u), GROUP_ID=$(id -g)
+# 1. .env erstellen (ALLE Werte erforderlich!)
+cat > .env << EOF
+USER_ID=$(id -u)
+GROUP_ID=$(id -g)
+PROJECTS_DIR=/srv/appdata/mkdocs/projects
+SITE_DIR=/srv/appdata/mkdocs/site
+NGINX_PORT=8080
+CONTAINER_BUILDER=mkdocs-builder
+CONTAINER_NGINX=docs-nginx
+EOF
 
 # 2. Ordner erstellen
-mkdir -p ~/docs-projects ~/docs-site
+mkdir -p /srv/appdata/mkdocs/projects /srv/appdata/mkdocs/site
 
 # 3. Stack bauen
 docker compose up -d --build
@@ -56,15 +67,16 @@ docker compose run --rm builder
 
 ```bash
 # Neues Projekt
-mkdir -p ~/docs-projects/mein-projekt/docs
-cat > ~/docs-projects/mein-projekt/mkdocs.yml << 'EOF'
+mkdir -p /srv/appdata/mkdocs/projects/mein-projekt/docs
+
+cat > /srv/appdata/mkdocs/projects/mein-projekt/mkdocs.yml << 'EOF'
 site_name: Mein Projekt
 docs_dir: docs
 theme:
   name: material
 EOF
 
-cat > ~/docs-projects/mein-projekt/docs/index.md << 'EOF'
+cat > /srv/appdata/mkdocs/projects/mein-projekt/docs/index.md << 'EOF'
 # Hallo MkDocs
 
 Das ist mein erstes Projekt.
@@ -73,19 +85,19 @@ EOF
 # Bauen
 docker compose run --rm builder
 
-# Browser
+# Browser (Port aus .env)
 # http://127.0.0.1:8080/mein-projekt/
 ```
 
-## Wichtige Variablen in .env
+## Erforderliche Variablen in .env
 
-| Variable | Bedeutung | Beispiel |
-|----------|-----------|----------|
-| `USER_ID` | Deine Linux-UID | `1000` (from `id -u`) |
-| `GROUP_ID` | Deine Linux-GID | `1000` (from `id -g`) |
-| `PROJECTS_DIR` | Wo liegen deine MkDocs-Projekte? | `/home/mario/docs-projects` |
-| `SITE_DIR` | Wo sollen die gebauten Sites hin? | `/home/mario/docs-site` |
-| `NGINX_PORT` | Port für Nginx (lokal) | `8080` |
+| Variable | Beschreibung | Beispiel |
+|----------|--------------|----------|
+| `USER_ID` | Linux-UID | `id -u` |
+| `GROUP_ID` | Linux-GID | `id -g` |
+| `PROJECTS_DIR` | MkDocs-Projekte (absolut) | `/srv/appdata/mkdocs/projects` |
+| `SITE_DIR` | Build-Output (absolut) | `/srv/appdata/mkdocs/site` |
+| `NGINX_PORT` | Port für Nginx | `8080` |
 | `CONTAINER_BUILDER` | Container-Name Builder | `mkdocs-builder` |
 | `CONTAINER_NGINX` | Container-Name Nginx | `docs-nginx` |
 
@@ -98,9 +110,6 @@ docker compose run --rm builder
 id -u && id -g
 
 # Update .env und Restart
-echo "USER_ID=$(id -u)" > .env
-echo "GROUP_ID=$(id -g)" >> .env
-# ... rest
 docker compose down && docker compose up -d --build
 docker compose run --rm builder
 ```
@@ -110,17 +119,13 @@ docker compose run --rm builder
 ```bash
 # Logs checken
 docker compose logs builder
-
-# Lokales Testen
-cd ~/docs-projects/dein-projekt
-mkdocs build --strict
 ```
 
 ### Nginx zeigt 404
 
 ```bash
 # HTML vorhanden?
-ls ~/docs-site/dein-projekt/index.html
+ls ${SITE_DIR}/dein-projekt/index.html
 
 # Nginx-Logs
 docker compose logs nginx
@@ -129,8 +134,8 @@ docker compose logs nginx
 ## Datensicherheit
 
 ✅ **Alle Daten liegen auf dem Host:**
-- `~/docs-projects/` = Quellen (du kontrollierst)
-- `~/docs-site/` = Output (Builder schreibt mit deiner UID/GID)
+- `${PROJECTS_DIR}/` = Quellen
+- `${SITE_DIR}/` = Output (Builder schreibt mit UID/GID)
 
 ✅ **Container sind hardened:**
 - read-only FS (außer wo nötig)
@@ -141,22 +146,21 @@ docker compose logs nginx
 ✅ **Backup ist trivial:**
 
 ```bash
-tar czf docs-backup-$(date +%Y%m%d).tar.gz ~/docs-projects ~/docs-site
+tar czf docs-backup-$(date +%Y%m%d).tar.gz ${PROJECTS_DIR} ${SITE_DIR}
 ```
 
 ---
 
 ## Checkliste vor dem Start
 
-- [ ] `setup.sh` ausgeführt ODER
-- [ ] `.env` manuell korrekt konfiguriert
-- [ ] `mkdir -p ~/docs-projects ~/docs-site` ausgeführt
+- [ ] `.env` vollständig konfiguriert (alle Variablen gesetzt)
+- [ ] Ordner erstellt: `mkdir -p ${PROJECTS_DIR} ${SITE_DIR}`
 - [ ] `docker` und `docker compose` installiert
 - [ ] `docker compose up -d --build` erfolgreich
-- [ ] Browser öffnet http://127.0.0.1:8080/ ohne Fehler
+- [ ] Browser öffnet http://127.0.0.1:${NGINX_PORT}/ ohne Fehler
 
 ---
 
 **Status: READY FOR PRODUCTION** ✅
 
-Alle Anforderungen erfüllt. Kein Mystery-Code, kein Versteckmechanismus. Siehe README.md für vollständige Dokumentation.
+Alle Anforderungen erfüllt. Keine Default-Werte. Deployment rein über Umgebungsvariablen.

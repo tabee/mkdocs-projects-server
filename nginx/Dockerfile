@@ -1,8 +1,9 @@
 # syntax=docker/dockerfile:1.7
 FROM nginx:1.27-alpine
 
-ARG USER_ID=1000
-ARG GROUP_ID=1000
+# REQUIRED: USER_ID and GROUP_ID must be provided via build args
+ARG USER_ID
+ARG GROUP_ID
 
 # Weg mit unklarem Default-User, wir wollen Kontrolle
 RUN deluser nginx 2>/dev/null || true \
