@@ -66,7 +66,10 @@ docker compose run --rm builder
 ## Was funktioniert dann?
 
 ```bash
-# Neues Projekt
+# Neues Projekt (WICHTIG: Nutze die Pfade aus deiner .env!)
+# Wenn die Verzeichnisse root gehören, ändere erst die Besitzrechte:
+# sudo chown -R $(id -u):$(id -g) /srv/appdata/mkdocs/projects /srv/appdata/mkdocs/site
+
 mkdir -p /srv/appdata/mkdocs/projects/mein-projekt/docs
 
 cat > /srv/appdata/mkdocs/projects/mein-projekt/mkdocs.yml << 'EOF'
